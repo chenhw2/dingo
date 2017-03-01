@@ -12,12 +12,14 @@ import (
 	"crypto/tls"
 	"errors"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 
 	"github.com/lucas-clemente/quic-go/h2quic"
+	ss "github.com/shadowsocks/shadowsocks-go/shadowsocks"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/proxy"
 )
@@ -40,7 +42,8 @@ func NewHttps(sni string, forceh1 bool) *Https {
 	switch {
 	case forceh1 || *opt_h1:
 		h1 := &http.Transport{
-			TLSClientConfig: tlscfg,
+			TLSClientConfig:       tlscfg,
+			ResponseHeaderTimeout: 3 * time.Second,
 		}
 		if proxyURL, err := url.Parse(*opt_proxy); err != nil {
 			dbg(1, "proxyURL = url.Parse(): %s", err)
@@ -55,6 +58,17 @@ func NewHttps(sni string, forceh1 bool) *Https {
 			case "SOCKS":
 				dialer, _ := proxy.SOCKS5("tcp", proxyURL.Host, nil, proxy.Direct)
 				h1.Dial = dialer.Dial
+			case "SS":
+				if proxyURL.User != nil {
+					server, method := proxyURL.Host, proxyURL.User.Username()
+					server, method = strings.ToLower(server), strings.ToLower(method)
+					password, _ := proxyURL.User.Password()
+					if cipher, err := ss.NewCipher(method, password); err == nil {
+						h1.Dial = func(_, addr string) (net.Conn, error) {
+							return ss.Dial(addr, server, cipher.Copy())
+						}
+					}
+				}
 			}
 		}
 		tr = h1
