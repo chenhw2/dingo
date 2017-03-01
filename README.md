@@ -49,7 +49,7 @@ Usage of dingo-linux-amd64:
   -dbg int
     	debugging level (default 2)
   -gdns:auto
-    	Google DNS: try to lookup the closest IPv4 server
+    	Google DNS: try to lookup the closest IPv4 server, and auto set edns
   -gdns:edns string
     	Google DNS: EDNS client subnet (set 0.0.0.0/0 to disable)
   -gdns:host string
@@ -65,7 +65,7 @@ Usage of dingo-linux-amd64:
   -h1
     	use HTTPS/1.1 transport
   -h1:proxy string
-    	use Proxy of HTTP or SOCKS5, (Example "http://127.0.0.1:8080" or "socks(5)://127.0.0.1:1080")
+    	use Proxy of HTTP or SOCKS5, (Example "http://127.0.0.1:8080" or "socks(5)://127.0.0.1:1080" or "ss://method:pass@host:port")
   -insecure
     	disable SSL Certificate check
   -odns:host string
