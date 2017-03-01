@@ -33,7 +33,7 @@ func (r *Gdns) Init() {
 	r.server = flag.String("gdns:server", "216.58.195.78",
 		"Google DNS: server address")
 	r.auto = flag.Bool("gdns:auto", false,
-		"Google DNS: try to lookup the closest IPv4 server")
+		"Google DNS: try to lookup the closest IPv4 server, and auto set edns")
 	r.sni = flag.String("gdns:sni", "www.google.com",
 		"Google DNS: SNI string to send (should match server certificate)")
 	r.host = flag.String("gdns:host", "dns.google.com",
@@ -52,11 +52,16 @@ func (R *Gdns) Start() {
 	}
 
 	if *R.auto {
-		dbg(1, "resolving dns.google.com...")
+		if len(*R.edns) == 0 {
+			*R.edns = getIP() + "/32"
+		}
+		dbg(1, "auto edns using network ip... %s", *R.edns)
+
 		r4 := R.resolve(NewHttps(*R.sni, false), *R.server, "dns.google.com", 1)
 		if r4.Status == 0 && len(r4.Answer) > 0 {
 			R.server = &r4.Answer[0].Data
 		}
+		dbg(1, "resolving dns.google.com... %s", *R.server)
 	}
 
 	dbg(1, "starting %d Google Public DNS client(s) querying server %s",
