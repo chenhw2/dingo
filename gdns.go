@@ -52,16 +52,34 @@ func (R *Gdns) Start() {
 	}
 
 	if *R.auto {
-		if len(*R.edns) == 0 {
+		if 0 == len(*R.edns) {
 			*R.edns = getIP() + "/32"
+			dbg(1, "auto edns using network ip... %s", *R.edns)
 		}
-		dbg(1, "auto edns using network ip... %s", *R.edns)
-
-		r4 := R.resolve(NewHttps(*R.sni, false), *R.server, "dns.google.com", 1)
-		if r4.Status == 0 && len(r4.Answer) > 0 {
-			R.server = &r4.Answer[0].Data
+		if 0 != len(*opt_proxy) {
+			proxyURL, err := url.Parse(*opt_proxy)
+			if err == nil && "SS" == strings.ToUpper(proxyURL.Scheme) {
+				orgi_edns := *R.edns
+				r4proxy := R.resolve(NewHttps(*R.sni, false), *R.server, proxyURL.Hostname(), 1)
+				if 0 == r4proxy.Status && len(r4proxy.Answer) > 0 {
+					*R.edns = r4proxy.Answer[0].Data + "/32"
+					dbg(1, "switch edns using SSproxy ip... %s", *R.edns)
+				}
+				r4 := R.resolve(NewHttps(*R.sni, false), *R.server, "dns.google.com", 1)
+				if 0 == r4.Status && len(r4.Answer) > 0 {
+					R.server = &r4.Answer[0].Data
+				}
+				dbg(1, "resolving dns.google.com... %s", *R.server)
+				*R.edns = orgi_edns
+				dbg(1, "switch back edns... %s", *R.edns)
+			}
+		} else {
+			r4 := R.resolve(NewHttps(*R.sni, false), *R.server, "dns.google.com", 1)
+			if r4.Status == 0 && len(r4.Answer) > 0 {
+				R.server = &r4.Answer[0].Data
+			}
+			dbg(1, "resolving dns.google.com... %s", *R.server)
 		}
-		dbg(1, "resolving dns.google.com... %s", *R.server)
 	}
 
 	dbg(1, "starting %d Google Public DNS client(s) querying server %s",
